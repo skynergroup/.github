@@ -1,0 +1,26 @@
+name: Block GitHub-hosted runners
+
+on:
+  pull_request:
+    branches: ['**']
+    paths:
+      - '.github/workflows/**'
+
+jobs:
+  check:
+    name: Enforce self-hosted runners
+    runs-on: [self-hosted, Linux, X64, cosmos]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for GitHub-hosted runner usage
+        run: |
+          VIOLATIONS=$(grep -rn 'runs-on:.*ubuntu-\|runs-on:.*windows-\|runs-on:.*macos-' .github/workflows/ || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::The following workflow lines use GitHub-hosted runners:"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "Use [self-hosted, Linux, X64, cosmos] or [self-hosted, Linux, X64, android] instead."
+            exit 1
+          fi
+          echo "All workflows use self-hosted runners."
