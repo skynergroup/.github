@@ -1,0 +1,59 @@
+# Reusable PR-Agent workflow — Kimi Code direct via Anthropic protocol.
+# Caller repos only need a tiny workflow that references this one.
+#
+# Usage in any skynergroup repo:
+#
+#   name: PR Agent
+#   on:
+#     pull_request:
+#       types: [opened, reopened, ready_for_review, synchronize]
+#     issue_comment:
+#       types: [created]
+#   permissions:
+#     issues: write
+#     pull-requests: write
+#     contents: read
+#   jobs:
+#     review:
+#       uses: skynergroup/.github/.github/workflows/pr-agent.yml@main
+#       secrets: inherit
+
+name: PR Agent - AI Code Review
+
+on:
+  workflow_call:
+
+jobs:
+  pr_agent:
+    if: >
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/'))
+    runs-on: ubuntu-latest
+    name: PR Agent
+    steps:
+      - uses: the-pr-agent/pr-agent@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # ── Kimi Code direct (free via Kimi Code subscription) ──
+          # Kimi Coding API speaks the Anthropic Messages protocol.
+          # User-Agent "claude-code/0.1.0" is on Kimi's coding agent allowlist.
+          ANTHROPIC__KEY: ${{ secrets.KIMI_API_KEY }}
+          ANTHROPIC_API_BASE: "https://api.kimi.com/coding"
+          CONFIG__MODEL: "anthropic/kimi-for-coding"
+          CONFIG__MODEL_TURBO: "anthropic/kimi-for-coding"
+          CONFIG__CUSTOM_MODEL_MAX_TOKENS: "262144"
+
+          LITELLM__EXTRA_HEADERS: '{"User-Agent": "claude-code/0.1.0"}'
+          LITELLM__DROP_PARAMS: "true"
+
+          # ── Review behaviour ──
+          PR_DESCRIPTION__PUBLISH_LABELS: "true"
+          PR_DESCRIPTION__ADD_ORIGINAL_USER_DESCRIPTION: "true"
+          PR_REVIEWER__INLINE_CODE_COMMENTS: "true"
+          PR_REVIEWER__EXTRA_INSTRUCTIONS: >
+            Focus on: bugs, security issues, performance problems, and logic errors.
+            Be concise. Skip trivial style nits unless they affect readability.
+          PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS: "3"
