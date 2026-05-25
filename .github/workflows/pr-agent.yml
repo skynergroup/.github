@@ -1,5 +1,8 @@
 # Reusable PR-Agent workflow — Kimi Code direct via Anthropic protocol.
 #
+# Review/describe/improve settings are now in the global config repo:
+# https://github.com/skynergroup/pr-agent-settings
+#
 # Usage in any skynergroup repo (pin SHA to latest commit):
 #
 #   name: PR Agent
@@ -16,7 +19,7 @@
 #     review:
 #       uses: skynergroup/.github/.github/workflows/pr-agent.yml@<SHA>
 #       secrets:
-#         KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+#         KIMI_API_KEY: *** secrets.KIMI_API_KEY }}
 
 name: PR Agent - AI Code Review
 
@@ -24,7 +27,7 @@ on:
   workflow_call:
     secrets:
       KIMI_API_KEY:
-        description: "Kimi Code API key (org-level secret)"
+        *** "Kimi Code API key (org-level secret)"
         required: true
 
 jobs:
@@ -39,10 +42,10 @@ jobs:
     steps:
       - uses: the-pr-agent/pr-agent@main
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: *** secrets.GITHUB_TOKEN }}
 
           # ── Kimi Code direct (free via Kimi Code subscription) ──
-          ANTHROPIC__KEY: ${{ secrets.KIMI_API_KEY }}
+          ANTHROPIC__KEY: *** secrets.KIMI_API_KEY }}
           ANTHROPIC_API_BASE: "https://api.kimi.com/coding"
           CONFIG__MODEL: "anthropic/kimi-for-coding"
           CONFIG__MODEL_TURBO: "anthropic/kimi-for-coding"
@@ -51,30 +54,5 @@ jobs:
           LITELLM__EXTRA_HEADERS: '{"User-Agent": "claude-code/0.1.0"}'
           LITELLM__DROP_PARAMS: "true"
 
-          # ── Auto-run on PR open: review + describe + improve ──
-          GITHUB_APP__PR_COMMANDS: '["review", "describe", "improve"]'
-
-          # ── Review settings ──
-          PR_REVIEWER__INLINE_CODE_COMMENTS: "true"
-          PR_REVIEWER__REQUIRE_SCORE_REVIEW: "true"
-          PR_REVIEWER__REQUIRE_CAN_BE_SPLIT_REVIEW: "true"
-          PR_REVIEWER__REQUIRE_TODO_SCAN: "true"
-          PR_REVIEWER__REQUIRE_TICKET_ANALYSIS_REVIEW: "true"
-          PR_REVIEWER__NUM_MAX_FINDINGS: "5"
-          PR_REVIEWER__EXTRA_INSTRUCTIONS: >
-            Focus on: bugs, security issues, performance problems, and logic errors.
-            Be concise. Skip trivial style nits unless they affect readability.
-
-          # ── Describe settings (auto PR description + diagram) ──
-          PR_DESCRIPTION__PUBLISH_LABELS: "true"
-          PR_DESCRIPTION__ADD_ORIGINAL_USER_DESCRIPTION: "true"
-          PR_DESCRIPTION__GENERATE_AI_TITLE: "false"
-          PR_DESCRIPTION__ENABLE_PR_DIAGRAM: "true"
-          PR_DESCRIPTION__ENABLE_SEMANTIC_FILES_TYPES: "true"
-
-          # ── Improve settings (code suggestions) ──
-          PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS: "5"
-          PR_CODE_SUGGESTIONS__COMMITABLE_CODE_SUGGESTIONS: "true"
-          PR_CODE_SUGGESTIONS__DEMAND_CODE_SUGGESTIONS_SELF_REVIEW: "true"
-          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: >
-            Focus on bugs, edge cases, and performance. Skip style nits.
+          # All review/describe/improve/best_practices settings are in:
+          # skynergroup/pr-agent-settings/.pr_agent.toml (org-wide global config)
