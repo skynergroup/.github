@@ -1,5 +1,4 @@
 # Reusable PR-Agent workflow — Kimi Code direct via Anthropic protocol.
-# Caller repos only need a tiny workflow that references this one.
 #
 # Usage in any skynergroup repo (pin SHA to latest commit):
 #
@@ -43,8 +42,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
           # ── Kimi Code direct (free via Kimi Code subscription) ──
-          # Kimi Coding API speaks the Anthropic Messages protocol.
-          # User-Agent "claude-code/0.1.0" is on Kimi's coding agent allowlist.
           ANTHROPIC__KEY: ${{ secrets.KIMI_API_KEY }}
           ANTHROPIC_API_BASE: "https://api.kimi.com/coding"
           CONFIG__MODEL: "anthropic/kimi-for-coding"
@@ -54,11 +51,30 @@ jobs:
           LITELLM__EXTRA_HEADERS: '{"User-Agent": "claude-code/0.1.0"}'
           LITELLM__DROP_PARAMS: "true"
 
-          # ── Review behaviour ──
-          PR_DESCRIPTION__PUBLISH_LABELS: "true"
-          PR_DESCRIPTION__ADD_ORIGINAL_USER_DESCRIPTION: "true"
+          # ── Auto-run on PR open: review + describe + improve ──
+          GITHUB_APP__PR_COMMANDS: '["review", "describe", "improve"]'
+
+          # ── Review settings ──
           PR_REVIEWER__INLINE_CODE_COMMENTS: "true"
+          PR_REVIEWER__REQUIRE_SCORE_REVIEW: "true"
+          PR_REVIEWER__REQUIRE_CAN_BE_SPLIT_REVIEW: "true"
+          PR_REVIEWER__REQUIRE_TODO_SCAN: "true"
+          PR_REVIEWER__REQUIRE_TICKET_ANALYSIS_REVIEW: "true"
+          PR_REVIEWER__NUM_MAX_FINDINGS: "5"
           PR_REVIEWER__EXTRA_INSTRUCTIONS: >
             Focus on: bugs, security issues, performance problems, and logic errors.
             Be concise. Skip trivial style nits unless they affect readability.
-          PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS: "3"
+
+          # ── Describe settings (auto PR description + diagram) ──
+          PR_DESCRIPTION__PUBLISH_LABELS: "true"
+          PR_DESCRIPTION__ADD_ORIGINAL_USER_DESCRIPTION: "true"
+          PR_DESCRIPTION__GENERATE_AI_TITLE: "false"
+          PR_DESCRIPTION__ENABLE_PR_DIAGRAM: "true"
+          PR_DESCRIPTION__ENABLE_SEMANTIC_FILES_TYPES: "true"
+
+          # ── Improve settings (code suggestions) ──
+          PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS: "5"
+          PR_CODE_SUGGESTIONS__COMMITABLE_CODE_SUGGESTIONS: "true"
+          PR_CODE_SUGGESTIONS__DEMAND_CODE_SUGGESTIONS_SELF_REVIEW: "true"
+          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: >
+            Focus on bugs, edge cases, and performance. Skip style nits.
