@@ -1,7 +1,7 @@
 # Reusable PR-Agent workflow — Kimi Code direct via Anthropic protocol.
 # Caller repos only need a tiny workflow that references this one.
 #
-# Usage in any skynergroup repo:
+# Usage in any skynergroup repo (pin SHA to latest commit):
 #
 #   name: PR Agent
 #   on:
@@ -15,13 +15,18 @@
 #     contents: read
 #   jobs:
 #     review:
-#       uses: skynergroup/.github/.github/workflows/pr-agent.yml@main
-#       secrets: inherit
+#       uses: skynergroup/.github/.github/workflows/pr-agent.yml@<SHA>
+#       secrets:
+#         KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
 
 name: PR Agent - AI Code Review
 
 on:
   workflow_call:
+    secrets:
+      KIMI_API_KEY:
+        description: "Kimi Code API key (org-level secret)"
+        required: true
 
 jobs:
   pr_agent:
