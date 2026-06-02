@@ -1,5 +1,8 @@
 # Reusable PR-Agent workflow — Kimi Code direct via Anthropic protocol.
 #
+# All config is centralized here. Individual repos can override via
+# .pr_agent.toml in their root (loaded by apply_repo_settings).
+#
 # Usage in any skynergroup repo (pin SHA to latest commit):
 #
 #   name: PR Agent
@@ -16,7 +19,7 @@
 #     review:
 #       uses: skynergroup/.github/.github/workflows/pr-agent.yml@<SHA>
 #       secrets:
-#         KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+#         KIMI_API_KEY: *** secrets.KIMI_API_KEY }}
 
 name: PR Agent - AI Code Review
 
@@ -24,7 +27,7 @@ on:
   workflow_call:
     secrets:
       KIMI_API_KEY:
-        description: "Kimi Code API key (org-level secret)"
+        *** "Kimi Code API key (org-level secret)"
         required: true
 
 jobs:
@@ -39,33 +42,52 @@ jobs:
     steps:
       - uses: the-pr-agent/pr-agent@main
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: *** secrets.GITHUB_TOKEN }}
 
           # ── Kimi Code direct (free via Kimi Code subscription) ──
-          ANTHROPIC__KEY: ${{ secrets.KIMI_API_KEY }}
+          ANTHROPIC__KEY: *** secrets.KIMI_API_KEY }}
           ANTHROPIC_API_BASE: "https://api.kimi.com/coding"
           CONFIG__MODEL: "anthropic/kimi-for-coding"
           CONFIG__MODEL_TURBO: "anthropic/kimi-for-coding"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: "262144"
-
           LITELLM__EXTRA_HEADERS: '{"User-Agent": "claude-code/0.1.0"}'
           LITELLM__DROP_PARAMS: "true"
-
-          # ── Auto-run on PR open: review + describe + improve ──
-          GITHUB_APP__PR_COMMANDS: '["review", "describe", "improve"]'
 
           # ── Review settings ──
           PR_REVIEWER__INLINE_CODE_COMMENTS: "true"
           PR_REVIEWER__REQUIRE_SCORE_REVIEW: "true"
           PR_REVIEWER__REQUIRE_CAN_BE_SPLIT_REVIEW: "true"
           PR_REVIEWER__REQUIRE_TODO_SCAN: "true"
+          PR_REVIEWER__REQUIRE_SECURITY_REVIEW: "true"
           PR_REVIEWER__REQUIRE_TICKET_ANALYSIS_REVIEW: "true"
           PR_REVIEWER__NUM_MAX_FINDINGS: "5"
-          PR_REVIEWER__EXTRA_INSTRUCTIONS: >
-            Focus on: bugs, security issues, performance problems, and logic errors.
-            Be concise. Skip trivial style nits unless they affect readability.
+          PR_REVIEWER__EXTRA_INSTRUCTIONS: |
+            ## Skyner Group Review Standards
 
-          # ── Describe settings (auto PR description + diagram) ──
+            Focus areas (in priority order):
+            1. Security: flag hardcoded secrets, API keys, tokens, credentials. Flag SQL injection, XSS, CSRF risks.
+            2. Bugs: null/undefined access, off-by-one errors, race conditions, unhandled promise rejections.
+            3. Error handling: never swallow exceptions silently. All catch blocks must log or re-throw.
+            4. Performance: unnecessary re-renders in React, N+1 queries, missing indexes, unbounded loops.
+            5. Logic errors: wrong comparisons, inverted conditions, missing edge cases.
+
+            Skip:
+            - Trivial style nits (formatting, naming preferences) unless they cause confusion.
+            - Suggestions to add comments to self-documenting code.
+
+            Stack-specific checks:
+            - TypeScript: flag `any` types, prefer `unknown`. Check for proper null handling with `?.` and `??`.
+            - React/Next.js: flag derived state in useState+useEffect (compute during render instead). Check for missing dependency arrays.
+            - Kotlin/Compose: flag expensive computations in composable bodies without remember. Prefer StateFlow over LiveData.
+            - Swift/SwiftUI: flag @ObservedObject for view-owned objects (should be @StateObject). Prefer value types.
+            - Flutter/Dart: flag missing const constructors. Flag build methods over 50 lines.
+            - Astro: flag client:load where client:visible would suffice.
+
+            Git practices:
+            - Flag PRs that mix unrelated changes and should be split.
+            - Flag force-pushes to shared branches.
+
+          # ── Describe settings ──
           PR_DESCRIPTION__PUBLISH_LABELS: "true"
           PR_DESCRIPTION__ADD_ORIGINAL_USER_DESCRIPTION: "true"
           PR_DESCRIPTION__GENERATE_AI_TITLE: "false"
@@ -73,8 +95,24 @@ jobs:
           PR_DESCRIPTION__ENABLE_SEMANTIC_FILES_TYPES: "true"
 
           # ── Improve settings (code suggestions) ──
-          PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS: "5"
+          PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS_PER_CHUNK: "4"
           PR_CODE_SUGGESTIONS__COMMITABLE_CODE_SUGGESTIONS: "true"
+          PR_CODE_SUGGESTIONS__DUAL_PUBLISHING_SCORE_THRESHOLD: "7"
+          PR_CODE_SUGGESTIONS__FOCUS_ONLY_ON_PROBLEMS: "true"
           PR_CODE_SUGGESTIONS__DEMAND_CODE_SUGGESTIONS_SELF_REVIEW: "true"
-          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: >
-            Focus on bugs, edge cases, and performance. Skip style nits.
+          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
+            ## Skyner Group Code Standards
+
+            Priority: bugs and edge cases > performance > readability. Skip style nits.
+
+            Patterns to flag:
+            - Hardcoded secrets, API keys, or credentials (suggest env vars).
+            - Silent catch blocks (catch(e) {} or catch { }).
+            - Missing null/undefined checks before property access.
+            - var usage (suggest const/let).
+            - any types in TypeScript (suggest unknown or proper type).
+            - Derived state stored in useState+useEffect (compute during render).
+            - React components over 100 lines without extraction.
+            - Missing error boundaries around async operations.
+            - String concatenation in SQL queries (suggest parameterized queries).
+            - Missing input sanitization before rendering user content.
