@@ -1,0 +1,51 @@
+name: Runner Reaper (skynergroup)
+
+# Blacksmith spins up an ephemeral runner per job; when a VM dies before the job
+# cleanly finishes, the runner lingers as "offline" in the org and piles up.
+# GitHub only auto-reaps these after ~1 day (ephemeral) / ~14 days (non-ephemeral),
+# so we sweep offline `blacksmith-*` runners daily.
+#
+# Runs on GitHub-hosted ubuntu-latest — NOT a Blacksmith runner — so the cleanup
+# job never creates the very thing it cleans up.
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # daily at 03:17 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only — list matching runners, delete nothing"
+        type: boolean
+        default: false
+
+permissions: {} # PAT does the work; no GITHUB_TOKEN perms needed
+
+concurrency:
+  group: runner-reaper
+  cancel-in-progress: false
+
+jobs:
+  reap:
+    runs-on: ubuntu-latest
+    steps:
+      # DRY-RUN path. runner-reaper treats ANY non-None DRY_RUN value as true,
+      # so this env var must ONLY be present when we actually want a preview.
+      - name: Reap offline blacksmith runners (dry-run)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        uses: some-natalie/runner-reaper@9c8c4a220f0724d6bf488b8520599e59ee25e043 # v2.0.1
+        env:
+          GITHUB_PAT: ${{ secrets.RUNNER_REAPER_PAT }}
+          SCOPE_TYPE: organization
+          SCOPE_NAME: skynergroup
+          FUZZY_NAME: blacksmith
+          DRY_RUN: "true"
+
+      # LIVE path — note: DRY_RUN is intentionally absent (any value = dry run).
+      - name: Reap offline blacksmith runners (live)
+        if: ${{ github.event_name == 'schedule' || !inputs.dry_run }}
+        uses: some-natalie/runner-reaper@9c8c4a220f0724d6bf488b8520599e59ee25e043 # v2.0.1
+        env:
+          GITHUB_PAT: ${{ secrets.RUNNER_REAPER_PAT }}
+          SCOPE_TYPE: organization
+          SCOPE_NAME: skynergroup
+          FUZZY_NAME: blacksmith
