@@ -10,7 +10,7 @@ name: Runner Reaper (skynergroup)
 
 on:
   schedule:
-    - cron: "17 3 * * *" # daily at 03:17 UTC
+    - cron: "17 * * * *" # hourly at :17
   workflow_dispatch:
     inputs:
       dry_run:
