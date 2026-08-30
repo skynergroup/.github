@@ -21,7 +21,7 @@ env:
 jobs:
   deploy:
     name: Build & Deploy
-    runs-on: cosmos
+    runs-on: ${{ vars.RUNNER || 'blacksmith-2vcpu-ubuntu-2404' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
